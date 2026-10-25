@@ -1,0 +1,12 @@
+// Build a separately installable R50 test APK without changing release metadata.
+// From android/: ./gradlew -I ../scripts/r50-experimental.init.gradle assembleDebug
+gradle.beforeProject { project ->
+    project.pluginManager.withPlugin('com.android.application') {
+        def android = project.extensions.getByName('android')
+        android.buildTypes.getByName('debug').applicationIdSuffix = '.r50test'
+        android.buildTypes.getByName('debug').versionNameSuffix = '-r50-liveview'
+        android.sourceSets.getByName('debug').manifest.srcFile(
+            new File(project.rootDir, '../scripts/r50-experimental/AndroidManifest.xml')
+        )
+    }
+}

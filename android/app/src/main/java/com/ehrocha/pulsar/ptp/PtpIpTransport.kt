@@ -180,10 +180,10 @@ class PtpIpTransport private constructor(
 
     // [_liveViewSupported] / [_batterySupported] start true if the body
     // advertises the relevant op / prop, but get **downgraded at runtime**
-    // when the first call returns "not supported" (rc=0x200A / 0x2005).
-    // The EOS R/RP are the discovered cases: they list GetViewFinderData
-    // in GetDeviceInfo but reject SetEvfOutput, and list BatteryLevel but
-    // reject the read. Backed by StateFlow so Compose tile gates update
+    // when the operation returns "not supported" (rc=0x200A / 0x2005).
+    // Live view tries both standard and EOS property writes before giving
+    // up; a rejected standard EVF property alone is not conclusive.
+    // Backed by StateFlow so Compose tile gates update
     // without a restart.
     private val _liveViewSupported = MutableStateFlow(
         PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
@@ -490,25 +490,18 @@ class PtpIpTransport private constructor(
         }
         withContext(Dispatchers.IO) {
             try {
-                val v = PtpClient.CANON_EVF_OUTPUT_PC
-                val data = byteArrayOf(
-                    (v and 0xFF).toByte(),
-                    ((v ushr 8) and 0xFF).toByte(),
-                    ((v ushr 16) and 0xFF).toByte(),
-                    ((v ushr 24) and 0xFF).toByte(),
-                )
-                val r = client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                val r = client.canonSetLiveViewOutput(enabled = true)
                 if (r.ok) {
                     lastLiveViewError = null
                     true
                 } else {
                     lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
                     CanonBleLog.w(TAG, "startLiveView: $lastLiveViewError")
-                    // 0x200A PARAMETER_NOT_SUPPORTED / 0x2005 DEVICE_PROP_NOT_SUPPORTED
-                    // = body advertised the op but rejected the underlying prop.
+                    // Both standard and EOS property writes rejected EVF output.
                     // Downgrade so subsequent attempts short-circuit and the
-                    // Star Focus tile reflects reality (EOS R does this).
-                    if (r.code == 0x200A || r.code == 0x2005) {
+                    // Star Focus tile reflects the failed probes.
+                    if (r.code == PtpClient.RC_DEVICE_PROP_NOT_SUPPORTED ||
+                        r.code == PtpClient.RC_OPERATION_NOT_SUPPORTED) {
                         _liveViewSupported.value = false
                         CanonBleLog.i(TAG, "supportsLiveView downgraded to false " +
                             "(body advertised but rejects)")
@@ -529,14 +522,7 @@ class PtpIpTransport private constructor(
         if (!_connected.value) return@withLock
         withContext(Dispatchers.IO) {
             try {
-                val v = PtpClient.CANON_EVF_OUTPUT_OFF
-                val data = byteArrayOf(
-                    (v and 0xFF).toByte(),
-                    ((v ushr 8) and 0xFF).toByte(),
-                    ((v ushr 16) and 0xFF).toByte(),
-                    ((v ushr 24) and 0xFF).toByte(),
-                )
-                client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                client.canonSetLiveViewOutput(enabled = false)
             } catch (e: Throwable) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 CanonBleLog.w(TAG, "stopLiveView ${e.javaClass.simpleName}: ${e.message}")

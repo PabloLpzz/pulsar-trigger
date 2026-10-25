@@ -190,8 +190,8 @@ class PtpTransport private constructor(
 
     override val supportsBulb: Boolean = advertisesCanonBulb
     /** Initial value comes from the advertised op set; **downgraded at
-     *  runtime** when [startLiveView] sees `rc=0x200A` (the EOS R lists
-     *  GetViewFinderData but rejects SetEvfOutput, for example). Star Focus
+     *  runtime** only when both standard and EOS EVF output writes are
+     *  rejected as unsupported. Star Focus
      *  gates on this; PTP-capable bodies without it fall through to the
      *  existing CCAPI-only Star Focus path. */
     private val _liveViewSupported = MutableStateFlow(
@@ -535,7 +535,7 @@ class PtpTransport private constructor(
 
     /** Switch the body's EVF stream to the USB host so subsequent
      *  [getLiveViewFrame] calls return JPEG frames. Returns true on success.
-     *  Sends `SetDevicePropValue(0xD1B0, 0x02)` — body must be in a mode
+     *  Tries standard and Canon EOS property writes — body must be in a mode
      *  that allows live view (Manual is fine; **Bulb is not** — Canon
      *  disables EVF in Bulb). */
     override suspend fun startLiveView(): Boolean = wireMutex.withLock {
@@ -545,25 +545,18 @@ class PtpTransport private constructor(
         }
         withContext(Dispatchers.IO) {
             try {
-                // EVF output device is a UINT32, little-endian.
-                val v = PtpClient.CANON_EVF_OUTPUT_PC
-                val data = byteArrayOf(
-                    (v and 0xFF).toByte(),
-                    ((v ushr 8) and 0xFF).toByte(),
-                    ((v ushr 16) and 0xFF).toByte(),
-                    ((v ushr 24) and 0xFF).toByte(),
-                )
-                val r = client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                val r = client.canonSetLiveViewOutput(enabled = true)
                 if (r.ok) {
                     lastLiveViewError = null
                     true
                 } else {
                     lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
                     CanonBleLog.w(TAG, "startLiveView: $lastLiveViewError")
-                    // Body advertised the op but rejects the underlying
-                    // prop write — downgrade so the Star Focus tile gate
+                    // Both standard and EOS property writes rejected the underlying
+                    // EVF output — downgrade so the Star Focus tile gate
                     // and subsequent calls reflect reality.
-                    if (r.code == 0x200A || r.code == 0x2005) {
+                    if (r.code == PtpClient.RC_DEVICE_PROP_NOT_SUPPORTED ||
+                        r.code == PtpClient.RC_OPERATION_NOT_SUPPORTED) {
                         _liveViewSupported.value = false
                         CanonBleLog.i(TAG, "supportsLiveView downgraded to false (advertised but rejects)")
                     }
@@ -582,14 +575,7 @@ class PtpTransport private constructor(
         if (!_connected.value) return@withLock
         withContext(Dispatchers.IO) {
             try {
-                val v = PtpClient.CANON_EVF_OUTPUT_OFF
-                val data = byteArrayOf(
-                    (v and 0xFF).toByte(),
-                    ((v ushr 8) and 0xFF).toByte(),
-                    ((v ushr 16) and 0xFF).toByte(),
-                    ((v ushr 24) and 0xFF).toByte(),
-                )
-                client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                client.canonSetLiveViewOutput(enabled = false)
             } catch (e: PtpProtocolException) {
                 Log.w(TAG, "stopLiveView threw: ${e.message}")
             }

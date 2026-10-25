@@ -8,6 +8,7 @@ package com.ehrocha.pulsar.ptp
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -144,6 +145,48 @@ class PtpClient(
     suspend fun setDevicePropValue(propCode: Int, valueBytes: ByteArray): Response =
         wire.transact(OP_SET_DEVICE_PROP_VALUE, intArrayOf(propCode),
                  dataOut = valueBytes, expectDataIn = false)
+
+    /** EOS numeric property write (0x9110), as used by libgphoto2's
+     *  ptp_canon_eos_setdevicepropvalue. Unlike 0x1016, the property code
+     *  belongs in the data phase: UINT32 length, property code, value (LE).
+     *  Even UINT16 properties such as EVFMode use a 12-byte record. */
+    suspend fun canonSetDevicePropValue(propCode: Int, value: Int): Response {
+        val data = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(12).putInt(propCode).putInt(value).array()
+        return wire.transact(OP_CANON_SET_DEVICE_PROP_VALUE_EX,
+            dataOut = data, expectDataIn = false)
+    }
+
+    /** Shared USB / PTP-IP EVF setup. Preserve the standard-property path
+     *  for bodies where it already works. A rejected 0x1016 does not prove
+     *  that live view is unavailable: EOS bodies (including the reported
+     *  R50) can require the vendor property writer instead.
+     *
+     *  Before enabling via EOS, fetch the initial property events and try
+     *  EVFMode=1, following libgphoto2's preview setup. These are best effort:
+     *  some bodies do not expose EVFMode or report busy while already in
+     *  live view. The EVFOutput write determines the result. Wire failures
+     *  and cancellation propagate to the transport; they are never retried
+     *  as unsupported properties. */
+    suspend fun canonSetLiveViewOutput(enabled: Boolean): Response {
+        val output = if (enabled) CANON_EVF_OUTPUT_PC else CANON_EVF_OUTPUT_OFF
+        val data = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(output).array()
+        val standard = setDevicePropValue(PROP_CANON_EVF_OUTPUT, data)
+        CanonBleLog.i(tag, "EVF standard 0x1016 output=$output rc=0x%04X".format(standard.code))
+        if (standard.ok || (standard.code != RC_DEVICE_PROP_NOT_SUPPORTED &&
+                    standard.code != RC_OPERATION_NOT_SUPPORTED)) return standard
+
+        if (enabled) {
+            val events = wire.transact(OP_CANON_GET_EVENT, expectDataIn = true)
+            CanonBleLog.i(tag, "EVF GetEvent 0x9116 rc=0x%04X".format(events.code))
+            val mode = canonSetDevicePropValue(PROP_CANON_EVF_MODE, 1)
+            CanonBleLog.i(tag, "EVF EOS 0x9110 mode=1 rc=0x%04X (best effort)".format(mode.code))
+        }
+        val eos = canonSetDevicePropValue(PROP_CANON_EVF_OUTPUT, output)
+        CanonBleLog.i(tag, "EVF EOS 0x9110 output=$output rc=0x%04X".format(eos.code))
+        return eos
+    }
 
     // ── Object enumeration / transfer (photo-transfer gallery) ──────────
     // Standard PTP object ops (PIMA 15740 §5.5). Transport-agnostic, so the
@@ -316,6 +359,7 @@ class PtpClient(
         // to USB so subsequent GetViewFinderData calls return frames; set
         // back to 0x00 = none on release. Property is UINT32 on R-class.
         const val PROP_CANON_EVF_OUTPUT = 0xD1B0
+        const val PROP_CANON_EVF_MODE = 0xD1B1
         const val CANON_EVF_OUTPUT_PC = 0x02
         const val CANON_EVF_OUTPUT_OFF = 0x00
 
@@ -325,6 +369,8 @@ class PtpClient(
         const val OP_CANON_REMOTE_RELEASE_OFF = 0x9129
         const val OP_CANON_SET_REMOTE_MODE = 0x9114
         const val OP_CANON_EVENT_MODE = 0x9115
+        const val OP_CANON_GET_EVENT = 0x9116
+        const val OP_CANON_SET_DEVICE_PROP_VALUE_EX = 0x9110
         const val OP_CANON_GET_VIEWFINDER_DATA = 0x9153
         const val OP_CANON_DRIVE_LENS = 0x9155
 
@@ -333,6 +379,7 @@ class PtpClient(
         const val RC_SESSION_NOT_OPEN = 0x2003
         const val RC_INVALID_TRANSACTION_ID = 0x2004
         const val RC_OPERATION_NOT_SUPPORTED = 0x2005
+        const val RC_DEVICE_PROP_NOT_SUPPORTED = 0x200A
         const val RC_DEVICE_BUSY = 0x2019
 
         // ── Vendor extension IDs ─────────────────────────────────────────

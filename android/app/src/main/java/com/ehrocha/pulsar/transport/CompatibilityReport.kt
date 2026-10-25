@@ -128,11 +128,14 @@ private fun reportCanonOpsAndProps(ops: Collection<Int>, props: Collection<Int>)
         0x9155 to "Canon DriveLens",
         0x1015 to "GetDevicePropValue",
         0x1016 to "SetDevicePropValue",
+        0x9110 to "Canon SetDevicePropValueEx",
+        0x9116 to "Canon GetEvent",
     )
     val propChecks = linkedMapOf(
         0x5001 to "BatteryLevel (std PTP)",
         0xD157 to "Canon LensName",
         0xD1B0 to "Canon EvfOutput",
+        0xD1B1 to "Canon EvfMode",
         0xD102 to "Canon ShutterSpeed",
         0xD101 to "Canon Aperture",
         0xD103 to "Canon ISO",

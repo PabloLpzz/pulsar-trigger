@@ -42,7 +42,12 @@ class BulkPtpWire(
         val txId = ++transactionId
         sendCommand(opCode, params, txId)
         if (dataOut != null) sendData(opCode, dataOut, txId)
-        val data = if (expectDataIn) readData(txId) else null
+        val incoming = if (expectDataIn) readData(txId) else null
+        // An unsupported data-in operation may return RESPONSE immediately,
+        // without DATA. It is already consumed; do not read a second response
+        // or lose its code before the Canon fallback can inspect it.
+        if (incoming != null && incoming.data == null) return incoming
+        val data = incoming?.data
         return readResponse(txId).copy(data = data)
     }
 
@@ -143,13 +148,16 @@ class BulkPtpWire(
     }
 
     /** Read a DATA container. Loops until the declared length has arrived. */
-    private fun readData(expectedTxId: Int): ByteArray {
+    private fun readData(expectedTxId: Int): PtpClient.Response {
         val first = ByteArray(BULK_READ_CHUNK)
         val firstLen = connection.bulkTransfer(bulkIn, first, first.size, TIMEOUT_LONG)
         if (firstLen < 12) throw PtpProtocolException("recv-data", "short read: $firstLen")
         val header = ByteBuffer.wrap(first, 0, 12).order(ByteOrder.LITTLE_ENDIAN)
         val declared = header.int
         val type = header.short.toInt() and 0xFFFF
+        if (type == PtpClient.CONTAINER_RESPONSE) {
+            return parseResponse(first, firstLen, expectedTxId)
+        }
         header.short // opCode echo
         val txId = header.int
         if (type != PtpClient.CONTAINER_DATA) {
@@ -172,12 +180,16 @@ class BulkPtpWire(
             System.arraycopy(first, 0, out, copied, take)
             copied += take
         }
-        return out
+        return PtpClient.Response(PtpClient.RC_OK, data = out)
     }
 
     private fun readResponse(expectedTxId: Int): PtpClient.Response {
         val buf = ByteArray(64)
         val n = connection.bulkTransfer(bulkIn, buf, buf.size, TIMEOUT_DEFAULT)
+        return parseResponse(buf, n, expectedTxId)
+    }
+
+    private fun parseResponse(buf: ByteArray, n: Int, expectedTxId: Int): PtpClient.Response {
         if (n < 12) throw PtpProtocolException("recv-response", "short read: $n")
         val header = ByteBuffer.wrap(buf, 0, n).order(ByteOrder.LITTLE_ENDIAN)
         val declared = header.int
@@ -193,7 +205,10 @@ class BulkPtpWire(
                 "transaction id mismatch: expected $expectedTxId, got $txId",
             )
         }
-        val paramCount = ((declared - 12).coerceAtLeast(0) / 4).coerceAtMost(5)
+        if (declared !in 12..32 || declared > n || (declared - 12) % 4 != 0) {
+            throw PtpProtocolException("recv-response", "invalid response length: $declared / $n")
+        }
+        val paramCount = (declared - 12) / 4
         val params = IntArray(paramCount) { header.int }
         return PtpClient.Response(code, params)
     }
