@@ -2,7 +2,7 @@
 
 Addresses [issue #1](https://github.com/pulsar-trigger/pulsar-trigger/issues/1).
 The user confirmed that the first experimental APK shows Live View on the R50.
-The v2 changes still require hardware validation.
+The experimental display/performance changes and the v3 star detector still require hardware validation. See [the v3 focus assistant guide](star-focus-assistant.md).
 
 ## V2: FPS and camera display
 
@@ -62,7 +62,7 @@ cd android
 
 The APK is `app/build/outputs/apk/debug/app-debug.apk`. The experimental init
 script sets application ID `com.ehrocha.pulsar.r50test`, version
-`0.649.0-r50-liveview-v2`, version code `661`, and launcher label **Pulsar R50
+`0.649.0-r50-liveview-v3`, version code `662`, and launcher label **Pulsar R50
 Test**. It is debug signed with the same key as v1 and updates that experimental
 app in place. The original app and its data remain separate. Omitting the init
 script keeps the normal application's ID and version.

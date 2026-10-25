@@ -82,7 +82,7 @@
     <string name="star_focus_lock_step_avoid_ring">フォーカスリングに触れないでください。最近のレンズは電子式で、MF でもフォーカスが動きます。</string>
     <string name="star_focus_btn_next">次へ</string>
     <string name="star_focus_btn_back">戻る</string>
-    <string name="star_focus_btn_focus_done">合焦完了 — 続行</string>
+    <string name="star_focus_btn_focus_done">このピントで続ける</string>
     <string name="star_focus_btn_done">完了</string>
     <string name="astro2_lens_detected_prime">単焦点 · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">ズーム · %1$d-%2$d mm — 現在の値を入力してください</string>
@@ -725,7 +725,7 @@
     <string name="guide_flows_title">フローとプリセット</string>
     <string name="guide_flows_body">フローは複数の撮影ステップを1つの自動化されたシーケンスにチェーンできます。\n\n• 各ステップはインターバロメーター、天体、ダークフレーム、ランプ、または一時停止にできます。\n• ステップは順番に実行 — 「100枚ライト撮影後、30枚ダーク」のようなワークフローに最適。\n• フローをライブラリに保存し、タグ付けで簡単に検索。\n• お気に入りに登録して最もよく使うフローを先頭に表示。\n• 内蔵プリセットで一般的なシナリオをすぐに開始できます。\n• 現在のステップのモードと主要パラメーターは実行ビューのチップに表示されるので、何が発火中か常に把握できます。</string>
     <string name="guide_star_focus_title">スターフォーカスアシスト</string>
-    <string name="guide_star_focus_body">天体撮影を始める前に星にピンポイントでピントを合わせるための、4 ステップのガイド付きウィザード。ライブビューをサポートする Canon トランスポートで利用可能です：Canon Wi-Fi（CCAPI）、USB-C PTP、および Canon Wi-Fi PTP のうちライブビュー操作を広告するボディ。Canon BLE では利用できません — いずれの Canon BLE プロトコルもライブビューを公開しないためです。\n\n• 準備：レンズのAF/MFスイッチをAFに、モードダイヤルをMに（Bulbではライブビューが無効）。\n• ターゲット：ライブビューがストリーミング；明るい星をタップして小さな注目領域をロック。\n• フォーカス：フレームごとにピーク輝度ベースのシャープネス測定値を更新；6つのドライブフォーカスボタン（«««、««、«、»、»»、»»»）でモーターを送る — 1 = ファイン、3 = 粗。\n• ロック：ライブビューはバッテリー節約のため自動停止。スイッチ付きレンズはMFに切り替え；スイッチのないレンズはAFのまま — Pulsarはバルブ撮影でaf=falseを送信済み。\n\nCanon Wi-Fi または USB-C のカメラが接続されているとツールタブに表示されます。</string>
+    <string name="guide_star_focus_body">カメラをマニュアルモードにして複数の星に向けます。Pulsarは有効な点光源を最大5個選び、複数画像で大きさを比較します。小さいほど光が集中しています。水色の円は自動選択です。星をタップすると手動選択（黄色）に切り替わります。白飛び、孤立したノイズ、細長い光源は除外します。構図と露出を固定してください。最良値は相対的な値で、完全な合焦を保証しません。レンズが動くのはフォーカスボタンを押したときだけです。最後にプレビューを終了し、案内に従ってピントを固定します。</string>
     <string name="guide_polar_align_title">極軸合わせ</string>
     <string name="guide_polar_align_body">スマートフォンのコンパス＋GPS位置情報＋現在のポラリスの時角を使って赤道儀の極軸合わせを補助します。\n\n• マウントの極軸にスマートフォンをしっかり当てて（またはホットシューブラケットを使用）。\n• 画面上のレチクルが、極軸望遠鏡内で今ポラリスが見えるべき位置を示します。\n• マウントの高度・方位ノブを調整し、視野が一致するまで合わせます。\n\nオフライン動作 — GPS位置が取得できればネットワークは不要です。</string>
     <string name="guide_camera_test_title">カメラテスト</string>
@@ -1063,4 +1063,21 @@
     <string name="canon_ble_names_distinct">2つの名前は異なる必要があります。</string>
     <string name="canon_ble_dial_bulb">カメラのモードダイヤルを BULB に設定してください</string>
     <string name="canon_ble_dial_m">カメラのモードダイヤルを M に設定してください</string>
+    <string name="star_focus_auto_hint">星を自動選択します（水色の円）。星をタップすると手動選択に切り替わります。</string>
+    <string name="star_focus_auto_count">星の数：%1$d · 自動</string>
+    <string name="star_focus_manual">手動選択</string>
+    <string name="star_focus_auto">自動</string>
+    <string name="star_focus_reset">比較をリセット</string>
+    <string name="star_focus_metric">星の大きさ · 小さいほど良好</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">最良測定値：%1$.2f px</string>
+    <string name="star_focus_search_auto">有効な星を3個以上探しています。空に向けるか、星をタップしてください。</string>
+    <string name="star_focus_search_manual">有効な星がありません。白飛びしていない点光源を選択してください。</string>
+    <string name="star_focus_sampling">測定を安定化しています…</string>
+    <string name="star_focus_unstable">測定が不安定です。カメラを固定してお待ちください。</string>
+    <string name="star_focus_improving">星の光がより集中しています。</string>
+    <string name="star_focus_near_best">今回の比較の最良値に近い状態です。</string>
+    <string name="star_focus_worsening">最良測定値よりも光が広がっています。</string>
+    <string name="star_focus_relative_hint">構図と露出を固定してください。測定上の最良値は完全な合焦を保証しません。</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

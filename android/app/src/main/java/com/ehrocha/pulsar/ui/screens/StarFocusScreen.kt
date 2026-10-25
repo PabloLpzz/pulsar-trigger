@@ -39,6 +39,11 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.focus.FocusStar
+import com.ehrocha.pulsar.focus.StarFocusAnalyzer
+import com.ehrocha.pulsar.focus.StarFocusReading
+import com.ehrocha.pulsar.focus.StarFocusStatus
+import com.ehrocha.pulsar.focus.StarFocusTracker
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -67,8 +72,8 @@ private enum class Step(
  * CCAPI before kicking off an astro run.
  *
  *  1. PREP   — instructions: lens to AF, camera mode dial to M (not Bulb).
- *  2. AIM    — live view appears, user taps a bright star.
- *  3. FOCUS  — live view + sharpness readout + drive-focus buttons.
+ *  2. AIM    — detect several stars automatically, or select one manually.
+ *  3. FOCUS  — stable relative star-size readout + manual drive-focus buttons.
  *  4. LOCK   — instructions: flip lens to MF if it has the switch; either way
  *              Pulsar will send `af: false` during the actual run.
  *
@@ -100,8 +105,9 @@ fun StarFocusScreen(
 
     var step by remember { mutableStateOf(Step.PREP) }
     var frame by remember { mutableStateOf<Bitmap?>(null) }
-    var roiCenter by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var sharpness by remember { mutableIntStateOf(0) }
+    var roiCenter by remember(t) { mutableStateOf<Pair<Int, Int>?>(null) }
+    var focusReading by remember(t) { mutableStateOf(StarFocusReading()) }
+    var comparisonGeneration by remember(t) { mutableIntStateOf(0) }
     var displayedSize by remember { mutableStateOf<IntSize?>(null) }
     var liveViewError by remember { mutableStateOf<String?>(null) }
     var framesPerSecond by remember { mutableDoubleStateOf(0.0) }
@@ -114,6 +120,7 @@ fun StarFocusScreen(
         framesPerSecond = 0.0
         if (!liveViewActive) return@LaunchedEffect
         frame = null
+        focusReading = StarFocusReading(manual = roiCenter != null)
         try {
             val started = t.startLiveView()
             if (!started) {
@@ -122,33 +129,56 @@ fun StarFocusScreen(
             }
             liveViewError = null
             val meter = LiveViewFrameRate(SystemClock.elapsedRealtime())
+            val tracker = StarFocusTracker()
+            var trackedGeneration = comparisonGeneration
+            var lastAnalysisAt = 0L
             // Sample independently of frame delivery so a stalled feed shows
             // zero FPS instead of retaining its last successful reading.
             launch {
                 while (isActive) {
                     delay(1000)
-                    framesPerSecond = meter.sample(SystemClock.elapsedRealtime())
+                    val now = SystemClock.elapsedRealtime()
+                    framesPerSecond = meter.sample(now)
+                    if (now - lastAnalysisAt > 1500) {
+                        tracker.reset()
+                        focusReading = StarFocusReading(manual = roiCenter != null)
+                    }
                 }
             }
             while (isActive) {
                 val cycleStart = SystemClock.elapsedRealtime()
                 var receivedFrame = false
+                val generation = comparisonGeneration
+                val selection = roiCenter
+                if (trackedGeneration != generation) {
+                    tracker.reset()
+                    trackedGeneration = generation
+                    lastAnalysisAt = 0L
+                }
+                val analyzeNow = cycleStart - lastAnalysisAt >= 250
                 val bytes = t.getLiveViewFrame()
                 if (bytes != null && bytes.isNotEmpty()) {
-                    // Keep JPEG decoding and ROI analysis off the UI thread.
-                    val (bmp, sharp) = withContext(Dispatchers.Default) {
+                    // Analyze at most four previews per second. Detection and
+                    // photometry share the decode worker, never the UI thread.
+                    val (bmp, analysis) = withContext(Dispatchers.Default) {
                         val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        val s = roiCenter?.let { (cx, cy) ->
-                            if (b != null) computePeakLuminance(b, cx, cy, ROI_PX)
-                            else null
-                        }
-                        b to s
+                        val result = if (b != null && analyzeNow) {
+                            val pixels = IntArray(b.width * b.height)
+                            b.getPixels(pixels, 0, b.width, 0, 0, b.width, b.height)
+                            StarFocusAnalyzer.analyze(b.width, b.height, pixels, selection)
+                        } else null
+                        b to result
                     }
                     if (bmp != null) {
                         frame = bmp
-                        if (sharp != null) sharpness = sharp
                         meter.frameReceived()
                         receivedFrame = true
+                    }
+                    // A tap/reset may have happened while the worker ran.
+                    // Never publish a measurement for the previous selection.
+                    if (analysis != null && generation == comparisonGeneration) {
+                        focusReading = tracker.update(analysis)
+                        lastAnalysisAt = SystemClock.elapsedRealtime()
                     }
                 }
                 delay(liveViewPollingDelayMs(
@@ -187,12 +217,24 @@ fun StarFocusScreen(
                         frame = frame,
                         framesPerSecond = framesPerSecond,
                         liveViewError = liveViewError,
+                        focusReading = focusReading,
+                        automatic = roiCenter == null,
+                        onAuto = {
+                            roiCenter = null
+                            comparisonGeneration++
+                            focusReading = StarFocusReading()
+                        },
+                        onReset = {
+                            comparisonGeneration++
+                            focusReading = StarFocusReading(manual = roiCenter != null)
+                        },
                         roiCenter = roiCenter,
                         displayedSize = displayedSize,
                         onDisplayedSizeChange = { displayedSize = it },
-                        onRoiPicked = { x, y, bmp ->
+                        onRoiPicked = { x, y ->
                             roiCenter = x to y
-                            sharpness = computePeakLuminance(bmp, x, y, ROI_PX)
+                            comparisonGeneration++
+                            focusReading = StarFocusReading(manual = true)
                         },
                         onBack = { step = Step.PREP },
                         onNext = { step = Step.FOCUS },
@@ -202,8 +244,18 @@ fun StarFocusScreen(
                         frame = frame,
                         framesPerSecond = framesPerSecond,
                         liveViewError = liveViewError,
+                        focusReading = focusReading,
+                        automatic = roiCenter == null,
+                        onAuto = {
+                            roiCenter = null
+                            comparisonGeneration++
+                            focusReading = StarFocusReading()
+                        },
+                        onReset = {
+                            comparisonGeneration++
+                            focusReading = StarFocusReading(manual = roiCenter != null)
+                        },
                         roiCenter = roiCenter,
-                        sharpness = sharpness,
                         displayedSize = displayedSize,
                         onDisplayedSizeChange = { displayedSize = it },
                         onBack = { step = Step.AIM },
@@ -297,10 +349,14 @@ private fun AimStep(
     frame: Bitmap?,
     framesPerSecond: Double,
     liveViewError: String?,
+    focusReading: StarFocusReading,
+    automatic: Boolean,
+    onAuto: () -> Unit,
+    onReset: () -> Unit,
     roiCenter: Pair<Int, Int>?,
     displayedSize: IntSize?,
     onDisplayedSizeChange: (IntSize) -> Unit,
-    onRoiPicked: (Int, Int, Bitmap) -> Unit,
+    onRoiPicked: (Int, Int) -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -309,20 +365,22 @@ private fun AimStep(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            stringResource(R.string.star_focus_aim_hint),
+            stringResource(R.string.star_focus_auto_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         LiveViewBox(
             frame = frame,
             framesPerSecond = framesPerSecond,
+            focusStars = focusReading.stars,
             liveViewError = liveViewError,
             roiCenter = roiCenter,
             onDisplayedSizeChange = onDisplayedSizeChange,
-            onTap = { bmp, x, y -> onRoiPicked(x, y, bmp) },
+            onTap = { _, x, y -> onRoiPicked(x, y) },
             displayedSize = displayedSize,
             modifier = Modifier.weight(1f),
         )
+        StarFocusReadout(focusReading, automatic, onAuto, onReset)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.star_focus_btn_back))
@@ -330,7 +388,7 @@ private fun AimStep(
             Button(
                 onClick = onNext,
                 modifier = Modifier.weight(2f),
-                enabled = roiCenter != null,
+                enabled = focusReading.stars.size >= if (automatic) 3 else 1,
             ) { Text(stringResource(R.string.star_focus_btn_next)) }
         }
     }
@@ -342,8 +400,11 @@ private fun FocusStep(
     frame: Bitmap?,
     framesPerSecond: Double,
     liveViewError: String?,
+    focusReading: StarFocusReading,
+    automatic: Boolean,
+    onAuto: () -> Unit,
+    onReset: () -> Unit,
     roiCenter: Pair<Int, Int>?,
-    sharpness: Int,
     displayedSize: IntSize?,
     onDisplayedSizeChange: (IntSize) -> Unit,
     onBack: () -> Unit,
@@ -356,6 +417,7 @@ private fun FocusStep(
         LiveViewBox(
             frame = frame,
             framesPerSecond = framesPerSecond,
+            focusStars = focusReading.stars,
             liveViewError = liveViewError,
             roiCenter = roiCenter,
             onDisplayedSizeChange = onDisplayedSizeChange,
@@ -363,37 +425,7 @@ private fun FocusStep(
             displayedSize = displayedSize,
             modifier = Modifier.weight(1f),
         )
-        // Sharpness readout
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Default.Star,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.star_focus_sharpness_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        "$sharpness / 255",
-                        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                    )
-                }
-            }
-        }
+        StarFocusReadout(focusReading, automatic, onAuto, onReset)
         // Drive-focus row
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainer,
@@ -437,6 +469,66 @@ private fun FocusStep(
             Button(onClick = onDone, modifier = Modifier.weight(2f)) {
                 Text(stringResource(R.string.star_focus_btn_focus_done))
             }
+        }
+    }
+}
+
+@Composable
+private fun StarFocusReadout(
+    reading: StarFocusReading,
+    automatic: Boolean,
+    onAuto: () -> Unit,
+    onReset: () -> Unit,
+) {
+    val statusRes = when (reading.status) {
+        StarFocusStatus.SEARCHING -> if (automatic) R.string.star_focus_search_auto else R.string.star_focus_search_manual
+        StarFocusStatus.SAMPLING -> R.string.star_focus_sampling
+        StarFocusStatus.UNSTABLE -> R.string.star_focus_unstable
+        StarFocusStatus.IMPROVING -> R.string.star_focus_improving
+        StarFocusStatus.NEAR_BEST -> R.string.star_focus_near_best
+        StarFocusStatus.WORSENING -> R.string.star_focus_worsening
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (automatic) stringResource(R.string.star_focus_auto_count, reading.stars.size)
+                    else stringResource(R.string.star_focus_manual),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!automatic) TextButton(onClick = onAuto) { Text(stringResource(R.string.star_focus_auto)) }
+                TextButton(onClick = onReset) { Text(stringResource(R.string.star_focus_reset)) }
+            }
+            Text(stringResource(R.string.star_focus_metric), style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    reading.hfr?.let { stringResource(R.string.star_focus_metric_value, it) } ?: "—",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                reading.bestHfr?.let {
+                    Text(stringResource(R.string.star_focus_best_value, it), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Text(
+                stringResource(statusRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = when (reading.status) {
+                    StarFocusStatus.WORSENING -> MaterialTheme.colorScheme.error
+                    StarFocusStatus.UNSTABLE -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Text(
+                stringResource(R.string.star_focus_relative_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -495,6 +587,7 @@ private fun InstructionRow(bullet: String, text: String) {
 private fun LiveViewBox(
     frame: Bitmap?,
     framesPerSecond: Double,
+    focusStars: List<FocusStar>,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
     onDisplayedSizeChange: (IntSize) -> Unit,
@@ -565,13 +658,18 @@ private fun LiveViewBox(
                     },
                 )
                 val ds = displayedSize
-                val roi = roiCenter
-                if (roi != null && ds != null) {
-                    RoiOverlay(
-                        roiX = roi.first, roiY = roi.second,
-                        bmpW = bmp.width, bmpH = bmp.height,
-                        viewW = ds.width, viewH = ds.height,
-                    )
+                if (ds != null) {
+                    val points = if (focusStars.isNotEmpty()) {
+                        focusStars.map { it.x.toInt() to it.y.toInt() }
+                    } else listOfNotNull(roiCenter)
+                    for ((x, y) in points) {
+                        RoiOverlay(
+                            roiX = x, roiY = y,
+                            bmpW = bmp.width, bmpH = bmp.height,
+                            viewW = ds.width, viewH = ds.height,
+                            markerColor = if (roiCenter == null) Color.Cyan else Color.Yellow,
+                        )
+                    }
                 }
             }
         }
@@ -597,6 +695,7 @@ private fun BoxScope.RoiOverlay(
     roiX: Int, roiY: Int,
     bmpW: Int, bmpH: Int,
     viewW: Int, viewH: Int,
+    markerColor: Color,
 ) {
     val scale = minOf(viewW.toFloat() / bmpW, viewH.toFloat() / bmpH)
     val drawW = bmpW * scale
@@ -609,7 +708,7 @@ private fun BoxScope.RoiOverlay(
     val density = LocalDensity.current
     Surface(
         color = Color.Transparent,
-        border = BorderStroke(2.dp, Color.Yellow),
+        border = BorderStroke(2.dp, markerColor),
         shape = CircleShape,
         modifier = Modifier
             // Anchor top-left so the offset is absolute. Without this the
@@ -653,28 +752,4 @@ private fun viewToBitmap(
     val offX = (viewW - drawW) / 2f
     val offY = (viewH - drawH) / 2f
     return ((tx - offX) / scale).toInt() to ((ty - offY) / scale).toInt()
-}
-
-/** Peak luminance inside a [size]×[size] box centered at ([cx], [cy]) on
- *  [bmp]. Returns 0..255; higher = sharper star (more concentrated light). */
-private fun computePeakLuminance(bmp: Bitmap, cx: Int, cy: Int, size: Int): Int {
-    val half = size / 2
-    val x0 = (cx - half).coerceAtLeast(0)
-    val y0 = (cy - half).coerceAtLeast(0)
-    val x1 = (cx + half).coerceAtMost(bmp.width - 1)
-    val y1 = (cy + half).coerceAtMost(bmp.height - 1)
-    val w = x1 - x0 + 1
-    val h = y1 - y0 + 1
-    if (w <= 0 || h <= 0) return 0
-    val pixels = IntArray(w * h)
-    bmp.getPixels(pixels, 0, w, x0, y0, w, h)
-    var peak = 0
-    for (p in pixels) {
-        val r = (p shr 16) and 0xFF
-        val g = (p shr 8) and 0xFF
-        val b = p and 0xFF
-        val luma = (r * 77 + g * 150 + b * 29) shr 8
-        if (luma > peak) peak = luma
-    }
-    return peak
 }

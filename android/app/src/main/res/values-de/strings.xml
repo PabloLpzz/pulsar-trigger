@@ -82,7 +82,7 @@
     <string name="star_focus_lock_step_avoid_ring">Den Fokusring nicht berühren. Bei modernen Objektiven ist er elektronisch und bewegt den Fokus auch in MF.</string>
     <string name="star_focus_btn_next">Weiter</string>
     <string name="star_focus_btn_back">Zurück</string>
-    <string name="star_focus_btn_focus_done">Scharf — weiter</string>
+    <string name="star_focus_btn_focus_done">Diesen Fokus verwenden — weiter</string>
     <string name="star_focus_btn_done">Fertig</string>
     <string name="astro2_lens_detected_prime">Festbrennweite · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — aktuellen Wert eintragen</string>
@@ -729,7 +729,7 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="guide_flows_title">Abläufe und Presets</string>
     <string name="guide_flows_body">Abläufe ermöglichen das Verketten mehrerer Aufnahmeschritte zu einer automatisierten Sequenz.\n\n• Jeder Schritt kann Intervallometer, Astro, Dark Frames, Rampe oder Pause sein.\n• Schritte werden der Reihe nach ausgeführt — ideal für „100 Lights aufnehmen, dann 30 Darks".\n• Speichern Sie Ihre Abläufe in der Bibliothek und markieren Sie sie mit Tags.\n• Markieren Sie Favoriten, damit Ihre meistgenutzten Abläufe zuerst erscheinen.\n• Integrierte Presets bieten schnelle Ausgangspunkte für gängige Szenarien.\n• Modus und Schlüsselparameter des aktuellen Schritts erscheinen im Chip der Laufansicht — Sie wissen immer, was gerade ausgelöst wird.</string>
     <string name="guide_star_focus_title">Star Focus</string>
-    <string name="guide_star_focus_body">Geführter Vier-Schritte-Assistent, um vor einem Astro-Lauf punktgenau auf Sterne zu fokussieren. Verfügbar auf den Canon-Transporten, die Live-View unterstützen: Canon WLAN (CCAPI), USB-C PTP und Canon Wi-Fi PTP bei Gehäusen, die die Live-View-Operation ankündigen. Nicht verfügbar auf Canon BLE — kein Canon-BLE-Protokoll exponiert Live-View.\n\n• Vorbereiten: AF/MF-Schalter am Objektiv auf AF; Modusrad auf M (Live-View ist in Bulb deaktiviert).\n• Zielen: Live-View streamt; einen hellen Stern antippen, um einen kleinen Bereich darauf zu fixieren.\n• Fokussieren: Pro Bild aktualisierter Schärfemesser über Spitzen-Luminanz; sechs Drive-Focus-Tasten («««, ««, «, », »», »»») bewegen den Motor — 1 = fein, 3 = grob.\n• Sperren: Live-View stoppt automatisch zur Akku-Schonung. Objektiv mit Schalter auf MF stellen; bei Objektiven ohne Schalter AF lassen — Pulsar sendet bei Bulb-Läufen bereits af=false.\n\nIm Tab Werkzeuge zu finden, sobald eine Canon-Kamera über WLAN oder USB-C verbunden ist.</string>
+    <string name="guide_star_focus_body">Bereite die Kamera im manuellen Modus vor und richte sie auf mehrere Sterne. Pulsar wählt bis zu fünf geeignete Punktquellen aus und vergleicht ihre Größe über mehrere Bilder: kleiner bedeutet stärker gebündelt. Türkise Kreise markieren automatische Ziele; tippe einen Stern zur manuellen Auswahl an (gelb). Überbelichtete Sterne, einzelne Rauschpunkte und längliche Quellen werden verworfen. Halte Bildausschnitt und Belichtung konstant. Der beste Messwert ist relativ und garantiert keine perfekte Fokussierung. Das Objektiv bewegt sich nur beim Drücken der Fokustasten. Verlasse danach die Vorschau und folge den Hinweisen zum Sperren des Fokus.</string>
     <string name="guide_polar_align_title">Polausrichtung</string>
     <string name="guide_polar_align_body">Nutzt Telefon-Kompass + GPS-Standort + aktuellen Stundenwinkel von Polaris, um eine äquatoriale Montierung auszurichten.\n\n• Halten Sie das Telefon ruhig an die Polachse der Montierung (oder verwenden Sie eine Blitzschuh-Halterung).\n• Das Fadenkreuz auf dem Bildschirm zeigt, wo Polaris jetzt im Polsucher stehen sollte.\n• Justieren Sie die Höhen- und Azimutknöpfe der Montierung, bis das Bild übereinstimmt.\n\nFunktioniert offline — sobald der GPS-Fix vorliegt, ist kein Netzwerk nötig.</string>
     <string name="guide_camera_test_title">Kameratest</string>
@@ -1072,4 +1072,21 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="canon_ble_names_distinct">Die beiden Namen müssen unterschiedlich sein.</string>
     <string name="canon_ble_dial_bulb">Stelle das Moduswahlrad der Kamera auf BULB</string>
     <string name="canon_ble_dial_m">Stelle das Moduswahlrad der Kamera auf M</string>
+    <string name="star_focus_auto_hint">Sterne werden automatisch ausgewählt (türkise Kreise). Tippe einen Stern zur manuellen Auswahl an.</string>
+    <string name="star_focus_auto_count">Sterne: %1$d · Auto</string>
+    <string name="star_focus_manual">Manuelle Auswahl</string>
+    <string name="star_focus_auto">Auto</string>
+    <string name="star_focus_reset">Vergleich zurücksetzen</string>
+    <string name="star_focus_metric">Sterngröße · kleiner ist besser</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">Bester Messwert: %1$.2f px</string>
+    <string name="star_focus_search_auto">Suche nach mindestens 3 geeigneten Sternen. Richte die Kamera auf den Himmel oder tippe einen Stern an.</string>
+    <string name="star_focus_search_manual">Hier ist kein geeigneter Stern. Wähle eine nicht überbelichtete Punktquelle.</string>
+    <string name="star_focus_sampling">Messung wird stabilisiert…</string>
+    <string name="star_focus_unstable">Unstabile Messung. Warte und halte die Kamera ruhig.</string>
+    <string name="star_focus_improving">Die Sterne werden stärker gebündelt.</string>
+    <string name="star_focus_near_best">Nahe am besten Wert dieses Vergleichs.</string>
+    <string name="star_focus_worsening">Stärker verteilt als beim besten Messwert.</string>
+    <string name="star_focus_relative_hint">Halte Bildausschnitt und Belichtung konstant. Der beste Messwert garantiert keine perfekte Fokussierung.</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

@@ -82,7 +82,7 @@
     <string name="star_focus_lock_step_avoid_ring">No toques el anillo de enfoque. En la mayoría de objetivos modernos es electrónico y mueve el foco incluso en MF.</string>
     <string name="star_focus_btn_next">Siguiente</string>
     <string name="star_focus_btn_back">Atrás</string>
-    <string name="star_focus_btn_focus_done">Enfoque nítido — continuar</string>
+    <string name="star_focus_btn_focus_done">Usar este enfoque — continuar</string>
     <string name="star_focus_btn_done">Listo</string>
     <string name="astro2_lens_detected_prime">Prime · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — introduce el valor actual</string>
@@ -731,7 +731,7 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="guide_flows_title">Flujos y Presets</string>
     <string name="guide_flows_body">Los Flujos permiten encadenar múltiples pasos de disparo en una secuencia automatizada.\n\n• Cada paso puede ser Intervalómetro, Astro, Dark Frames, Rampa o Pausa.\n• Los pasos se ejecutan en orden — ideal para "disparar 100 lights, luego 30 darks".\n• Guarda tus flujos en la biblioteca y etiquétalos para encontrarlos fácilmente.\n• Marca favoritos para que tus flujos más usados aparezcan primero.\n• Los presets integrados ofrecen puntos de partida rápidos para escenarios comunes.\n• El modo y los parámetros clave del paso actual aparecen en el chip de la pantalla de ejecución, para saber siempre qué se está disparando.</string>
     <string name="guide_star_focus_title">Foco en Estrella</string>
-    <string name="guide_star_focus_body">Asistente guiado en cuatro pasos para acertar foco preciso en estrellas antes de iniciar una sesión astro. Disponible en los transportes Canon que admiten live view: Canon Wi-Fi (CCAPI), USB-C PTP y Canon Wi-Fi PTP en cuerpos que anuncian la operación de live view. No disponible en Canon BLE — ningún protocolo Canon BLE expone live view.\n\n• Preparar: interruptor AF/MF del objetivo en AF; selector de modo en M (live view se desactiva en Bulb).\n• Apuntar: live view en directo; toca una estrella brillante para fijar una pequeña región de interés.\n• Enfocar: medidor de nitidez por pico de luminancia se actualiza por cuadro; seis botones de drive-focus («««, ««, «, », »», »»») mueven el motor — 1 = fino, 3 = grueso.\n• Bloquear: live view se detiene automáticamente para ahorrar batería. Pasa el objetivo a MF si tiene interruptor; para objetivos sin él, deja AF activo — Pulsar ya envía af=false en sesiones de bulb.\n\nDisponible en la pestaña Herramientas cuando una cámara Canon vía Wi-Fi o USB-C está conectada.</string>
+    <string name="guide_star_focus_body">Asistente para enfocar estrellas mediante Canon CCAPI, USB PTP o Wi-Fi PTP/IP. Prepara la cámara en modo Manual y apunta a varias estrellas. Pulsar selecciona hasta cinco puntos válidos y compara su tamaño durante varias imágenes; menor es mejor. Los círculos cian muestran la selección automática. Toca una estrella para seleccionarla a mano (amarillo). Se descartan estrellas saturadas, ruido aislado y puntos alargados. Mantén el encuadre y la exposición; reinicia la comparación si los cambias. El mejor valor es relativo y no garantiza un enfoque perfecto. El objetivo solo se mueve al pulsar los botones de enfoque. Al terminar, sal de la previsualización y sigue los pasos para bloquear el enfoque.</string>
     <string name="guide_polar_align_title">Alineación Polar</string>
     <string name="guide_polar_align_body">Usa la brújula del teléfono + tu ubicación GPS + el ángulo horario actual de Polaris para ayudar a alinear una montura ecuatorial.\n\n• Sostén el teléfono firme contra el eje polar de la montura (o usa un soporte de zapata).\n• La retícula en pantalla muestra dónde debe estar Polaris en el buscador polar ahora.\n• Ajusta los mandos de altitud y azimut de la montura hasta que la vista coincida.\n\nFunciona sin conexión — una vez obtenido el fix de GPS no necesitas red.</string>
     <string name="guide_camera_test_title">Prueba de Cámara</string>
@@ -1079,4 +1079,21 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="canon_ble_names_distinct">Los dos nombres deben ser diferentes.</string>
     <string name="canon_ble_dial_bulb">Pon el dial de modo de la cámara en BULB</string>
     <string name="canon_ble_dial_m">Pon el dial de modo de la cámara en M</string>
+    <string name="star_focus_auto_hint">Las estrellas se seleccionan automáticamente (círculos cian). Toca una estrella para seleccionarla a mano.</string>
+    <string name="star_focus_auto_count">Estrellas: %1$d · Auto</string>
+    <string name="star_focus_manual">Selección manual</string>
+    <string name="star_focus_auto">Auto</string>
+    <string name="star_focus_reset">Reiniciar comparación</string>
+    <string name="star_focus_metric">Tamaño de estrellas · menor es mejor</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">Mejor medido: %1$.2f px</string>
+    <string name="star_focus_search_auto">Buscando al menos 3 estrellas válidas. Apunta al cielo o toca una estrella.</string>
+    <string name="star_focus_search_manual">No hay una estrella válida aquí. Selecciona un punto luminoso sin saturar.</string>
+    <string name="star_focus_sampling">Estabilizando la medición…</string>
+    <string name="star_focus_unstable">Medición inestable. Espera y mantén la cámara quieta.</string>
+    <string name="star_focus_improving">Las estrellas se están concentrando.</string>
+    <string name="star_focus_near_best">Cerca del mejor valor de esta comparación.</string>
+    <string name="star_focus_worsening">Más dispersas que el mejor valor medido.</string>
+    <string name="star_focus_relative_hint">Mantén el encuadre y la exposición. El mejor medido no confirma un enfoque perfecto.</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

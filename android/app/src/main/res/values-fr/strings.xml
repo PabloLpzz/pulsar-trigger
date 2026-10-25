@@ -82,7 +82,7 @@
     <string name="star_focus_lock_step_avoid_ring">Ne touchez pas la bague de mise au point. Sur la plupart des objectifs modernes, elle est électronique et déplacera la mise au point même en MF.</string>
     <string name="star_focus_btn_next">Suivant</string>
     <string name="star_focus_btn_back">Retour</string>
-    <string name="star_focus_btn_focus_done">Mise au point nette — continuer</string>
+    <string name="star_focus_btn_focus_done">Utiliser cette mise au point — continuer</string>
     <string name="star_focus_btn_done">Terminer</string>
     <string name="astro2_lens_detected_prime">Fixe · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — saisissez la valeur actuelle</string>
@@ -733,7 +733,7 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="guide_flows_title">Flux et Presets</string>
     <string name="guide_flows_body">Les Flux permettent d\'enchaîner plusieurs étapes de prise de vue en une séquence automatisée.\n\n• Chaque étape peut être Intervallomètre, Astro, Dark Frames, Rampe ou Pause.\n• Les étapes s\'exécutent dans l\'ordre — idéal pour « shooter 100 lights, puis 30 darks ».\n• Sauvegardez vos flux dans la bibliothèque et étiquetez-les pour un accès facile.\n• Marquez vos favoris pour que vos flux les plus utilisés apparaissent en premier.\n• Les presets intégrés offrent des points de départ rapides pour les scénarios courants.\n• Le mode et les paramètres clés de l\'étape courante apparaissent dans la puce de l\'écran d\'exécution, pour toujours savoir ce qui se déclenche.</string>
     <string name="guide_star_focus_title">Focus Étoile</string>
-    <string name="guide_star_focus_body">Assistant guidé en quatre étapes pour viser une mise au point précise sur les étoiles avant de lancer une session astro. Disponible sur les deux transports Canon qui supportent le live view : CCAPI en Wi-Fi et USB-C PTP sur les boîtiers qui annoncent l\'opération live view. Non disponible sur Canon BLE direct — le protocole BR-E1 n\'a pas d\'endpoint live view.\n\n• Préparer : interrupteur AF/MF de l\'objectif sur AF ; molette de mode sur M (le live view est désactivé en Bulb).\n• Viser : le live view diffuse ; appuyez sur une étoile brillante pour fixer une petite région d\'intérêt.\n• Focaliser : un indicateur de netteté par pic de luminance se met à jour à chaque image ; six boutons drive-focus («««, ««, «, », »», »»») déplacent le moteur — 1 = fin, 3 = grossier.\n• Verrouiller : le live view s\'arrête automatiquement pour économiser la batterie. Passez l\'objectif en MF s\'il a l\'interrupteur ; pour les objectifs sans, laissez l\'AF — Pulsar envoie déjà af=false en bulb.\n\nDisponible dans l\'onglet Outils quand un appareil Canon en Wi-Fi ou USB-C est connecté.</string>
+    <string name="guide_star_focus_body">Préparez la caméra en mode Manuel et visez plusieurs étoiles. Pulsar sélectionne jusqu’à cinq sources ponctuelles valides et compare leur taille sur plusieurs images : plus petit signifie mieux concentré. Les cercles cyan indiquent les cibles automatiques ; touchez une étoile pour la sélectionner manuellement (jaune). Les étoiles saturées, le bruit isolé et les sources allongées sont rejetés. Gardez le cadrage et l’exposition fixes. La meilleure mesure est relative, sans garantie de mise au point parfaite. L’objectif ne bouge que lorsque vous appuyez sur les boutons de mise au point. Quittez ensuite l’aperçu et suivez les instructions pour verrouiller la mise au point.</string>
     <string name="guide_polar_align_title">Mise en Station</string>
     <string name="guide_polar_align_body">Utilise la boussole du téléphone + votre position GPS + l\'angle horaire actuel de Polaris pour aider à aligner une monture équatoriale.\n\n• Maintenez le téléphone fermement contre l\'axe polaire de la monture (ou utilisez un support de griffe).\n• Le réticule à l\'écran indique où Polaris devrait se trouver dans le viseur polaire maintenant.\n• Ajustez les boutons d\'altitude et d\'azimut de la monture jusqu\'à ce que la vue corresponde.\n\nFonctionne hors-ligne — une fois le fix GPS établi, vous n\'avez pas besoin de réseau.</string>
     <string name="guide_camera_test_title">Test Appareil</string>
@@ -1081,4 +1081,21 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="canon_ble_names_distinct">Les deux noms doivent être différents.</string>
     <string name="canon_ble_dial_bulb">Réglez le sélecteur de mode sur BULB</string>
     <string name="canon_ble_dial_m">Réglez le sélecteur de mode sur M</string>
+    <string name="star_focus_auto_hint">Les étoiles sont sélectionnées automatiquement (cercles cyan). Touchez une étoile pour la sélectionner manuellement.</string>
+    <string name="star_focus_auto_count">Étoiles : %1$d · Auto</string>
+    <string name="star_focus_manual">Sélection manuelle</string>
+    <string name="star_focus_auto">Auto</string>
+    <string name="star_focus_reset">Réinitialiser</string>
+    <string name="star_focus_metric">Taille des étoiles · plus petit = mieux</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">Meilleure mesure : %1$.2f px</string>
+    <string name="star_focus_search_auto">Recherche de 3 étoiles valides au minimum. Visez le ciel ou touchez une étoile.</string>
+    <string name="star_focus_search_manual">Aucune étoile valide ici. Sélectionnez une source ponctuelle non saturée.</string>
+    <string name="star_focus_sampling">Stabilisation de la mesure…</string>
+    <string name="star_focus_unstable">Mesure instable. Patientez et gardez la caméra immobile.</string>
+    <string name="star_focus_improving">Les étoiles deviennent plus concentrées.</string>
+    <string name="star_focus_near_best">Proche de la meilleure valeur de cette comparaison.</string>
+    <string name="star_focus_worsening">Plus étalées que la meilleure valeur mesurée.</string>
+    <string name="star_focus_relative_hint">Gardez le cadrage et l’exposition fixes. La meilleure mesure ne garantit pas une mise au point parfaite.</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

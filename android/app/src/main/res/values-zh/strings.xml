@@ -82,7 +82,7 @@
     <string name="star_focus_lock_step_avoid_ring">不要触碰对焦环。多数现代镜头的对焦环是电子的，即便在 MF 下也会移动对焦。</string>
     <string name="star_focus_btn_next">下一步</string>
     <string name="star_focus_btn_back">返回</string>
-    <string name="star_focus_btn_focus_done">已锐 — 继续</string>
+    <string name="star_focus_btn_focus_done">使用此焦点并继续</string>
     <string name="star_focus_btn_done">完成</string>
     <string name="astro2_lens_detected_prime">定焦 · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">变焦 · %1$d-%2$d mm — 请输入当前焦距</string>
@@ -725,7 +725,7 @@
     <string name="guide_flows_title">工作流与预设</string>
     <string name="guide_flows_body">工作流允许您将多个拍摄步骤串联成一个自动化序列。\n\n• 每个步骤可以是间隔计、天文、暗场、渐变或暂停。\n• 步骤按顺序执行——非常适合"拍摄 100 张亮场，然后 30 张暗场"的工作流。\n• 将工作流保存到库中并添加标签以便检索。\n• 收藏常用工作流使其显示在最前面。\n• 内置预设为常见场景提供快速起点。\n• 当前步骤的模式和关键参数会显示在运行视图的标签中，让您随时了解正在拍摄的内容。</string>
     <string name="guide_star_focus_title">星点对焦辅助</string>
-    <string name="guide_star_focus_body">在启动天文运行之前，通过四步引导向导精确对准星点对焦。可用于支持实时取景的佳能传输：佳能 Wi-Fi（CCAPI）、USB-C PTP 以及在公布实时取景操作的机身上通过的佳能 Wi-Fi PTP。佳能 BLE 不可用——任何佳能 BLE 协议都不暴露实时取景。\n\n• 准备：镜头 AF/MF 开关设为 AF；模式拨盘设为 M（B 门时实时取景禁用）。\n• 瞄准：实时取景流式传输；点击一颗明亮的恒星以在其上锁定小区域。\n• 对焦：逐帧更新的峰值亮度锐度读数；六个对焦驱动按钮（«««、««、«、»、»»、»»»）步进电机——1 = 精细，3 = 粗略。\n• 锁定：实时取景自动停止以节省电池。如有 MF 开关的镜头切换至 MF；没有开关的镜头保持 AF——Pulsar 已在 B 门运行时发送 af=false。\n\n在通过 Wi-Fi 或 USB-C 连接的佳能相机时，可在工具选项卡中找到。</string>
+    <string name="guide_star_focus_body">将相机设为手动模式并对准多颗星。Pulsar会选择最多5个有效点光源，通过多张预览图比较大小；越小表示光线越集中。青色圆圈表示自动目标，轻触星点可手动选择（黄色）。过曝星点、孤立噪点和细长光源会被排除。请保持构图和曝光不变。最佳值是相对值，并不保证完美合焦。只有按下对焦按钮时镜头才会移动。完成后退出预览，并按提示锁定焦点。</string>
     <string name="guide_polar_align_title">极轴对齐</string>
     <string name="guide_polar_align_body">使用手机的指南针 + GPS 位置 + 当前北极星时角辅助赤道仪极轴对齐。\n\n• 将手机稳定地贴在赤道仪的极轴上（或使用热靴/冷靴支架）。\n• 屏幕上的十字线显示北极星此刻应在极轴镜中的位置。\n• 调整赤道仪的高度和方位旋钮，直至视野匹配。\n\n离线工作——一旦 GPS 定位完成，就不需要网络。</string>
     <string name="guide_camera_test_title">相机测试</string>
@@ -1057,4 +1057,21 @@
     <string name="canon_ble_names_distinct">两个名称必须不同。</string>
     <string name="canon_ble_dial_bulb">将相机模式转盘设为 BULB</string>
     <string name="canon_ble_dial_m">将相机模式转盘设为 M</string>
+    <string name="star_focus_auto_hint">自动选择星点（青色圆圈）。轻触一颗星可切换到手动选择。</string>
+    <string name="star_focus_auto_count">星点数：%1$d · 自动</string>
+    <string name="star_focus_manual">手动选择</string>
+    <string name="star_focus_auto">自动</string>
+    <string name="star_focus_reset">重置比较</string>
+    <string name="star_focus_metric">星点大小 · 越小越好</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">最佳测量值：%1$.2f px</string>
+    <string name="star_focus_search_auto">正在寻找至少3个有效星点。请对准天空或轻触一颗星。</string>
+    <string name="star_focus_search_manual">此处没有有效星点。请选择未过曝的点光源。</string>
+    <string name="star_focus_sampling">正在稳定测量…</string>
+    <string name="star_focus_unstable">测量不稳定。请保持相机静止并稍候。</string>
+    <string name="star_focus_improving">星点正在变得更集中。</string>
+    <string name="star_focus_near_best">接近本次比较的最佳值。</string>
+    <string name="star_focus_worsening">比最佳测量值更分散。</string>
+    <string name="star_focus_relative_hint">请保持构图和曝光不变。最佳测量值并不保证完美合焦。</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

@@ -128,7 +128,7 @@
 
     <string name="star_focus_btn_next">Next</string>
     <string name="star_focus_btn_back">Back</string>
-    <string name="star_focus_btn_focus_done">Focus is sharp — continue</string>
+    <string name="star_focus_btn_focus_done">Use this focus — continue</string>
     <string name="star_focus_btn_done">Done</string>
     <string name="canon_auth_title">Camera authentication</string>
     <string name="canon_auth_subtitle">%1$s requires a username and password.</string>
@@ -1015,7 +1015,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="guide_flows_title">Flows &amp; Presets</string>
     <string name="guide_flows_body">Flows let you chain multiple shooting steps into a single automated sequence.\n\n• Each step can be an Intervalometer, Astro, Dark Frames, Ramp, or Pause.\n• Steps run in order — great for "shoot 100 lights, then 30 darks" workflows.\n• Save your flows to the library and tag them for easy retrieval.\n• Mark favourites so your most-used flows appear first.\n• Built-in presets give you a quick starting point for common scenarios.\n• The current step\'s mode and key parameters surface in the running-view chip so you always know what\'s firing.</string>
     <string name="guide_star_focus_title">Star Focus Assist</string>
-    <string name="guide_star_focus_body">A four-step guided wizard for nailing pinpoint focus on stars before kicking off an astro run. Available on the Canon transports that support live view: Canon Wi-Fi (CCAPI), USB-C PTP, and Canon Wi-Fi PTP on bodies that advertise the live-view op. Not available on Canon BLE — no Canon BLE protocol exposes live view.\n\n• Prep: lens AF/MF switch to AF; mode dial to M (live view is disabled in Bulb).\n• Aim: live view streams; tap a bright star to lock a small region of interest on it.\n• Focus: a peak-luminance sharpness readout updates per frame; six drive-focus buttons («««, ««, «, », »», »»») step the motor — 1 = fine, 3 = coarse.\n• Lock: live view auto-stops to save battery. Flip the lens to MF if it has the switch; for lenses without it, leave AF on — Pulsar already sends af=false on bulb runs.\n\nFind it on the Tools tab once a Canon Wi-Fi or USB-C body is connected.</string>
+    <string name="guide_star_focus_body">A guided assistant for focusing on stars through Canon CCAPI, USB PTP or Wi-Fi PTP/IP. Prepare the camera in Manual mode, then aim at several stars. Pulsar selects up to five valid point sources and compares their size over several previews; smaller is better. Cyan circles show automatic targets. Tap a star for manual selection (yellow). Saturated stars, isolated noise and elongated sources are rejected. Keep framing and exposure fixed; reset comparison after changing them. The best measured value is relative, not proof of perfect focus. The lens only moves when you press the near/far buttons. When finished, leave preview and follow the instructions to lock focus.</string>
     <string name="guide_polar_align_title">Polar Alignment</string>
     <string name="guide_polar_align_body">Uses the phone\'s compass + your GPS location + the current Polaris hour-angle to help align an equatorial mount.\n\n• Hold the phone steady against the mount\'s polar axis (or use a hot-shoe / cold-shoe bracket).\n• The on-screen reticle shows where Polaris should sit in the polar scope right now.\n• Adjust the mount\'s altitude and azimuth knobs until your view matches.\n\nWorks offline — once the GPS fix is established you don\'t need a network.</string>
     <string name="guide_camera_test_title">Camera Test</string>
@@ -1162,4 +1162,20 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="canon_ble_dial_bulb">Set the camera mode dial to BULB</string>
     <string name="canon_ble_dial_m">Set the camera mode dial to M</string>
     <string name="star_focus_fps">%1$.1f FPS</string>
+    <string name="star_focus_auto_hint">Stars are selected automatically (cyan circles). Tap one star to switch to manual selection.</string>
+    <string name="star_focus_auto_count">Stars: %1$d · Auto</string>
+    <string name="star_focus_manual">Manual selection</string>
+    <string name="star_focus_auto">Auto</string>
+    <string name="star_focus_reset">Reset comparison</string>
+    <string name="star_focus_metric">Star size · smaller is better</string>
+    <string name="star_focus_metric_value">%1$.2f px</string>
+    <string name="star_focus_best_value">Best measured: %1$.2f px</string>
+    <string name="star_focus_search_auto">Looking for at least 3 valid stars. Aim at the sky or tap a star.</string>
+    <string name="star_focus_search_manual">No valid star here. Select a point source that is not saturated.</string>
+    <string name="star_focus_sampling">Stabilizing measurement…</string>
+    <string name="star_focus_unstable">Unstable measurement. Wait and keep the camera steady.</string>
+    <string name="star_focus_improving">Stars are becoming more concentrated.</string>
+    <string name="star_focus_near_best">Close to the best value in this comparison.</string>
+    <string name="star_focus_worsening">More spread out than the best measured value.</string>
+    <string name="star_focus_relative_hint">Keep framing and exposure fixed. The measured best does not certify perfect focus.</string>
 </resources>
