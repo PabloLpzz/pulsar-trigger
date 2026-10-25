@@ -4,7 +4,10 @@ gradle.beforeProject { project ->
     project.pluginManager.withPlugin('com.android.application') {
         def android = project.extensions.getByName('android')
         android.buildTypes.getByName('debug').applicationIdSuffix = '.r50test'
-        android.buildTypes.getByName('debug').versionNameSuffix = '-r50-liveview'
+        android.buildTypes.getByName('debug').versionNameSuffix = '-r50-liveview-v2'
+        project.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+            dsl.defaultConfig.versionCode = 661
+        }
         android.sourceSets.getByName('debug').manifest.srcFile(
             new File(project.rootDir, '../scripts/r50-experimental/AndroidManifest.xml')
         )

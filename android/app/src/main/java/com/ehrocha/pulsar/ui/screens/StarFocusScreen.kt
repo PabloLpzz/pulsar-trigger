@@ -7,6 +7,7 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -42,13 +43,13 @@ import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val ROI_PX = 32
-private const val FRAME_INTERVAL_MS = 150L  // ~6-7 fps
 
 private enum class Step(
     val labelRes: Int,
@@ -103,51 +104,63 @@ fun StarFocusScreen(
     var sharpness by remember { mutableIntStateOf(0) }
     var displayedSize by remember { mutableStateOf<IntSize?>(null) }
     var liveViewError by remember { mutableStateOf<String?>(null) }
+    var framesPerSecond by remember { mutableDoubleStateOf(0.0) }
 
     // Live view runs only on AIM + FOCUS steps. Start on entry to AIM, stop
     // on transition out (or screen exit). Restarting on every recomposition
     // would thrash the camera, so we key on a derived flag.
     val liveViewActive = step == Step.AIM || step == Step.FOCUS
-    LaunchedEffect(liveViewActive) {
+    LaunchedEffect(t, liveViewActive) {
+        framesPerSecond = 0.0
         if (!liveViewActive) return@LaunchedEffect
-        val started = t.startLiveView()
-        if (!started) {
-            // Surface what the camera actually told us so failures are
-            // debuggable from the screen instead of needing logcat.
-            liveViewError = t.lastLiveViewError ?: "start_failed"
-            return@LaunchedEffect
-        }
-        liveViewError = null
-        while (isActive) {
-            val bytes = t.getLiveViewFrame()
-            if (bytes != null && bytes.isNotEmpty()) {
-                // JPEG decode + per-ROI luminance scan are CPU-bound; off-
-                // load them to a worker thread so the Compose recomposition
-                // pass and the polling delay aren't blocked.
-                val (bmp, sharp) = withContext(Dispatchers.Default) {
-                    val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    val s = roiCenter?.let { (cx, cy) ->
-                        if (b != null) computePeakLuminance(b, cx, cy, ROI_PX)
-                        else null
-                    }
-                    b to s
-                }
-                if (bmp != null) {
-                    frame = bmp
-                    if (sharp != null) sharpness = sharp
+        frame = null
+        try {
+            val started = t.startLiveView()
+            if (!started) {
+                liveViewError = t.lastLiveViewError ?: "start_failed"
+                return@LaunchedEffect
+            }
+            liveViewError = null
+            val meter = LiveViewFrameRate(SystemClock.elapsedRealtime())
+            // Sample independently of frame delivery so a stalled feed shows
+            // zero FPS instead of retaining its last successful reading.
+            launch {
+                while (isActive) {
+                    delay(1000)
+                    framesPerSecond = meter.sample(SystemClock.elapsedRealtime())
                 }
             }
-            delay(FRAME_INTERVAL_MS)
+            while (isActive) {
+                val cycleStart = SystemClock.elapsedRealtime()
+                var receivedFrame = false
+                val bytes = t.getLiveViewFrame()
+                if (bytes != null && bytes.isNotEmpty()) {
+                    // Keep JPEG decoding and ROI analysis off the UI thread.
+                    val (bmp, sharp) = withContext(Dispatchers.Default) {
+                        val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        val s = roiCenter?.let { (cx, cy) ->
+                            if (b != null) computePeakLuminance(b, cx, cy, ROI_PX)
+                            else null
+                        }
+                        b to s
+                    }
+                    if (bmp != null) {
+                        frame = bmp
+                        if (sharp != null) sharpness = sharp
+                        meter.frameReceived()
+                        receivedFrame = true
+                    }
+                }
+                delay(liveViewPollingDelayMs(
+                    SystemClock.elapsedRealtime() - cycleStart, receivedFrame,
+                ))
+            }
+        } finally {
+            // Runs on LOCK, PREP, screen exit, or transport change. Complete
+            // cleanup despite effect cancellation so the camera gets its
+            // display back rather than leaving host output enabled.
+            withContext(NonCancellable) { t.stopLiveView() }
         }
-    }
-    // Belt-and-braces: stop live view when leaving the screen entirely.
-    DisposableEffect(t) {
-        onDispose { vm.stopCanonLiveView() }
-    }
-    // Also stop when we move to LOCK explicitly so the user gets battery back
-    // while reading the lock instructions.
-    LaunchedEffect(step) {
-        if (step == Step.LOCK) vm.stopCanonLiveView()
     }
 
     Scaffold(
@@ -172,6 +185,7 @@ fun StarFocusScreen(
                     Step.AIM -> AimStep(
                         transport = t,
                         frame = frame,
+                        framesPerSecond = framesPerSecond,
                         liveViewError = liveViewError,
                         roiCenter = roiCenter,
                         displayedSize = displayedSize,
@@ -186,6 +200,7 @@ fun StarFocusScreen(
                     Step.FOCUS -> FocusStep(
                         transport = t,
                         frame = frame,
+                        framesPerSecond = framesPerSecond,
                         liveViewError = liveViewError,
                         roiCenter = roiCenter,
                         sharpness = sharpness,
@@ -280,6 +295,7 @@ private fun PrepStep(onNext: () -> Unit) {
 private fun AimStep(
     transport: CameraTransport,
     frame: Bitmap?,
+    framesPerSecond: Double,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
     displayedSize: IntSize?,
@@ -299,6 +315,7 @@ private fun AimStep(
         )
         LiveViewBox(
             frame = frame,
+            framesPerSecond = framesPerSecond,
             liveViewError = liveViewError,
             roiCenter = roiCenter,
             onDisplayedSizeChange = onDisplayedSizeChange,
@@ -323,6 +340,7 @@ private fun AimStep(
 private fun FocusStep(
     transport: CameraTransport,
     frame: Bitmap?,
+    framesPerSecond: Double,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
     sharpness: Int,
@@ -337,6 +355,7 @@ private fun FocusStep(
     ) {
         LiveViewBox(
             frame = frame,
+            framesPerSecond = framesPerSecond,
             liveViewError = liveViewError,
             roiCenter = roiCenter,
             onDisplayedSizeChange = onDisplayedSizeChange,
@@ -475,6 +494,7 @@ private fun InstructionRow(bullet: String, text: String) {
 @Composable
 private fun LiveViewBox(
     frame: Bitmap?,
+    framesPerSecond: Double,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
     onDisplayedSizeChange: (IntSize) -> Unit,
@@ -553,6 +573,20 @@ private fun LiveViewBox(
                         viewW = ds.width, viewH = ds.height,
                     )
                 }
+            }
+        }
+        if (bmp != null && liveViewError == null) {
+            Surface(
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                color = Color.Black.copy(alpha = 0.65f),
+                shape = RoundedCornerShape(6.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.star_focus_fps, framesPerSecond),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
             }
         }
     }

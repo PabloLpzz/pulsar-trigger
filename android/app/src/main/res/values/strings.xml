@@ -1161,4 +1161,5 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="canon_ble_names_distinct">The two names must be different.</string>
     <string name="canon_ble_dial_bulb">Set the camera mode dial to BULB</string>
     <string name="canon_ble_dial_m">Set the camera mode dial to M</string>
+    <string name="star_focus_fps">%1$.1f FPS</string>
 </resources>

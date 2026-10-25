@@ -169,23 +169,42 @@ class PtpClient(
      *  and cancellation propagate to the transport; they are never retried
      *  as unsupported properties. */
     suspend fun canonSetLiveViewOutput(enabled: Boolean): Response {
-        val output = if (enabled) CANON_EVF_OUTPUT_PC else CANON_EVF_OUTPUT_OFF
-        val data = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
-            .putInt(output).array()
-        val standard = setDevicePropValue(PROP_CANON_EVF_OUTPUT, data)
-        CanonBleLog.i(tag, "EVF standard 0x1016 output=$output rc=0x%04X".format(standard.code))
-        if (standard.ok || (standard.code != RC_DEVICE_PROP_NOT_SUPPORTED &&
-                    standard.code != RC_OPERATION_NOT_SUPPORTED)) return standard
+        var eosPrepared = !enabled
+        suspend fun writeOutput(output: Int): Response {
+            val data = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt(output).array()
+            val standard = setDevicePropValue(PROP_CANON_EVF_OUTPUT, data)
+            CanonBleLog.i(tag, "EVF standard 0x1016 output=$output rc=0x%04X".format(standard.code))
+            if (standard.ok) return standard
+            if (standard.code != RC_DEVICE_PROP_NOT_SUPPORTED &&
+                standard.code != RC_OPERATION_NOT_SUPPORTED) return standard
 
-        if (enabled) {
-            val events = wire.transact(OP_CANON_GET_EVENT, expectDataIn = true)
-            CanonBleLog.i(tag, "EVF GetEvent 0x9116 rc=0x%04X".format(events.code))
-            val mode = canonSetDevicePropValue(PROP_CANON_EVF_MODE, 1)
-            CanonBleLog.i(tag, "EVF EOS 0x9110 mode=1 rc=0x%04X (best effort)".format(mode.code))
+            if (!eosPrepared) {
+                val events = wire.transact(OP_CANON_GET_EVENT, expectDataIn = true)
+                CanonBleLog.i(tag, "EVF GetEvent 0x9116 rc=0x%04X".format(events.code))
+                val mode = canonSetDevicePropValue(PROP_CANON_EVF_MODE, 1)
+                CanonBleLog.i(tag, "EVF EOS 0x9110 mode=1 rc=0x%04X (best effort)".format(mode.code))
+                eosPrepared = true
+            }
+            val eos = canonSetDevicePropValue(PROP_CANON_EVF_OUTPUT, output)
+            CanonBleLog.i(tag, "EVF EOS 0x9110 output=$output rc=0x%04X".format(eos.code))
+            return eos
         }
-        val eos = canonSetDevicePropValue(PROP_CANON_EVF_OUTPUT, output)
-        CanonBleLog.i(tag, "EVF EOS 0x9110 output=$output rc=0x%04X".format(eos.code))
-        return eos
+
+        // EVF output is a bitmask: 1=camera display, 2=host, 3=both.
+        // Restore the camera display when leaving Star Focus. If a body
+        // rejects these values, retain the previously working host/off pair.
+        val preferred = if (enabled) CANON_EVF_OUTPUT_CAMERA_AND_PC else CANON_EVF_OUTPUT_CAMERA
+        val result = writeOutput(preferred)
+        val retry = when (result.code) {
+            RC_GENERAL_ERROR, RC_OPERATION_NOT_SUPPORTED, RC_DEVICE_PROP_NOT_SUPPORTED,
+            RC_PARAMETER_NOT_SUPPORTED, RC_INVALID_DEVICE_PROP_VALUE -> true
+            else -> false
+        }
+        if (!retry) return result
+        val fallback = if (enabled) CANON_EVF_OUTPUT_PC else CANON_EVF_OUTPUT_OFF
+        CanonBleLog.i(tag, "EVF output=$preferred rejected; retrying output=$fallback")
+        return writeOutput(fallback)
     }
 
     // ── Object enumeration / transfer (photo-transfer gallery) ──────────
@@ -355,12 +374,12 @@ class PtpClient(
         const val PROP_CANON_SHUTTER_SPEED = 0xD102
         const val CANON_SHUTTER_SPEED_BULB = 0x000C
 
-        // EVF output device. Set to 0x02 = PC to redirect the EVF stream
-        // to USB so subsequent GetViewFinderData calls return frames; set
-        // back to 0x00 = none on release. Property is UINT32 on R-class.
+        // EVF output bitmask: camera=1, host=2, both=3. UINT32 on R-class.
         const val PROP_CANON_EVF_OUTPUT = 0xD1B0
         const val PROP_CANON_EVF_MODE = 0xD1B1
+        const val CANON_EVF_OUTPUT_CAMERA = 0x01
         const val CANON_EVF_OUTPUT_PC = 0x02
+        const val CANON_EVF_OUTPUT_CAMERA_AND_PC = 0x03
         const val CANON_EVF_OUTPUT_OFF = 0x00
 
         // ── Canon EOS vendor operations (vendor extension ID 11) ─────────
@@ -376,11 +395,14 @@ class PtpClient(
 
         // ── PTP response codes ───────────────────────────────────────────
         const val RC_OK = 0x2001
+        const val RC_GENERAL_ERROR = 0x2002
         const val RC_SESSION_NOT_OPEN = 0x2003
         const val RC_INVALID_TRANSACTION_ID = 0x2004
         const val RC_OPERATION_NOT_SUPPORTED = 0x2005
+        const val RC_PARAMETER_NOT_SUPPORTED = 0x2006
         const val RC_DEVICE_PROP_NOT_SUPPORTED = 0x200A
         const val RC_DEVICE_BUSY = 0x2019
+        const val RC_INVALID_DEVICE_PROP_VALUE = 0x201C
 
         // ── Vendor extension IDs ─────────────────────────────────────────
         const val VENDOR_EXT_CANON_EOS = 11L

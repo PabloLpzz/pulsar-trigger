@@ -88,7 +88,7 @@ class BulkPtpWireResponseTest {
         assertEquals(4, outputData.int)
         assertEquals(12, outputData.int)
         assertEquals(0xD1B0, outputData.int)
-        assertEquals(2, outputData.int)
+        assertEquals(3, outputData.int)
     }
 
     @Test fun `early response with wrong transaction id is rejected`() = runTest {

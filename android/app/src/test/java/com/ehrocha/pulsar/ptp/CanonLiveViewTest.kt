@@ -63,13 +63,13 @@ class CanonLiveViewTest {
         ), call.data)
     }
 
-    @Test fun `working standard live view keeps its existing operation sequence`() = runTest {
+    @Test fun `standard live view requests camera and host displays`() = runTest {
         val wire = RecordingWire(0x2001)
         assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
         val call = wire.calls.single()
         assertEquals(0x1016, call.op)
         assertArrayEquals(intArrayOf(0xD1B0), call.params)
-        assertArrayEquals(byteArrayOf(2, 0, 0, 0), call.data)
+        assertArrayEquals(byteArrayOf(3, 0, 0, 0), call.data)
         assertFalse(call.expectDataIn)
     }
 
@@ -82,14 +82,14 @@ class CanonLiveViewTest {
         assertNull(events.data)
         assertTrue(events.expectDataIn)
         assertEosWrite(wire.calls[2], 0xB1, 1)
-        assertEosWrite(wire.calls[3], 0xB0, 2)
+        assertEosWrite(wire.calls[3], 0xB0, 3)
     }
 
     @Test fun `unsupported standard operation also tries EOS`() = runTest {
         val wire = RecordingWire(0x2005, 0x2001, 0x2001, 0x2001)
         assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
         assertEquals(4, wire.calls.size)
-        assertEosWrite(wire.calls.last(), 0xB0, 2)
+        assertEosWrite(wire.calls.last(), 0xB0, 3)
     }
 
     @Test fun `optional event and EVF mode rejection does not hide working output`() = runTest {
@@ -101,7 +101,7 @@ class CanonLiveViewTest {
     @Test fun `busy EVF mode still permits output as in Canon preview setup`() = runTest {
         val wire = RecordingWire(0x200A, 0x2001, 0x2019, 0x2001)
         assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
-        assertEosWrite(wire.calls.last(), 0xB0, 2)
+        assertEosWrite(wire.calls.last(), 0xB0, 3)
     }
 
     @Test fun `busy standard output does not trigger unsupported-property fallback`() = runTest {
@@ -110,16 +110,16 @@ class CanonLiveViewTest {
         assertEquals(1, wire.calls.size)
     }
 
-    @Test fun `general error does not trigger unsupported-property fallback`() = runTest {
-        val wire = RecordingWire(0x2002)
+    @Test fun `general error retries host only without mistaking it for an unsupported operation`() = runTest {
+        val wire = RecordingWire(0x2002, 0x2002)
         assertEquals(0x2002, PtpClient(wire).canonSetLiveViewOutput(true).code)
-        assertEquals(1, wire.calls.size)
+        assertEquals(listOf(0x1016, 0x1016), wire.calls.map { it.op })
     }
 
     @Test fun `EOS output rejection remains a failed live view attempt`() = runTest {
-        val wire = RecordingWire(0x200A, 0x2001, 0x2001, 0x200A)
+        val wire = RecordingWire(0x200A, 0x2001, 0x2001, 0x200A, 0x200A, 0x200A)
         assertEquals(0x200A, PtpClient(wire).canonSetLiveViewOutput(true).code)
-        assertEquals(4, wire.calls.size)
+        assertEquals(6, wire.calls.size)
     }
 
     @Test fun `EOS output busy is preserved so it is not marked unsupported`() = runTest {
@@ -127,18 +127,57 @@ class CanonLiveViewTest {
         assertEquals(0x2019, PtpClient(wire).canonSetLiveViewOutput(true).code)
     }
 
-    @Test fun `standard stop writes zero without enabling EVF`() = runTest {
+    @Test fun `EOS body rejecting combined display falls back to working host output`() = runTest {
+        val wire = RecordingWire(0x200A, 0x2001, 0x2001, 0x201C, 0x200A, 0x2001)
+        assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
+        assertEquals(listOf(0x1016, 0x9116, 0x9110, 0x9110, 0x1016, 0x9110), wire.calls.map { it.op })
+        assertEosWrite(wire.calls[3], 0xB0, 3)
+        assertArrayEquals(byteArrayOf(2, 0, 0, 0), wire.calls[4].data)
+        assertEosWrite(wire.calls[5], 0xB0, 2)
+    }
+
+    @Test fun `standard body rejecting combined display can still enable host only`() = runTest {
+        val wire = RecordingWire(0x201C, 0x2001)
+        assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
+        assertEquals(listOf(0x1016, 0x1016), wire.calls.map { it.op })
+        assertArrayEquals(byteArrayOf(3, 0, 0, 0), wire.calls[0].data)
+        assertArrayEquals(byteArrayOf(2, 0, 0, 0), wire.calls[1].data)
+    }
+
+    @Test fun `unsupported combined output still succeeds when EOS accepts host only`() = runTest {
+        val wire = RecordingWire(0x200A, 0x2001, 0x2001, 0x200A, 0x200A, 0x2001)
+        assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
+        assertEosWrite(wire.calls.last(), 0xB0, 2)
+    }
+
+    @Test fun `EOS initialization also runs when only the host-only attempt needs it`() = runTest {
+        val wire = RecordingWire(0x201C, 0x200A, 0x2001, 0x2001, 0x2001)
+        assertTrue(PtpClient(wire).canonSetLiveViewOutput(true).ok)
+        assertEquals(listOf(0x1016, 0x1016, 0x9116, 0x9110, 0x9110), wire.calls.map { it.op })
+        assertEosWrite(wire.calls[3], 0xB1, 1)
+        assertEosWrite(wire.calls[4], 0xB0, 2)
+    }
+
+    @Test fun `rejected camera output falls back to disabling host output`() = runTest {
+        val wire = RecordingWire(0x200A, 0x201C, 0x200A, 0x2001)
+        assertTrue(PtpClient(wire).canonSetLiveViewOutput(false).ok)
+        assertEquals(listOf(0x1016, 0x9110, 0x1016, 0x9110), wire.calls.map { it.op })
+        assertEosWrite(wire.calls[1], 0xB0, 1)
+        assertEosWrite(wire.calls[3], 0xB0, 0)
+    }
+
+    @Test fun `standard stop restores the camera display without enabling EVF`() = runTest {
         val wire = RecordingWire(0x2001)
         assertTrue(PtpClient(wire).canonSetLiveViewOutput(false).ok)
         assertEquals(1, wire.calls.size)
-        assertArrayEquals(byteArrayOf(0, 0, 0, 0), wire.calls.single().data)
+        assertArrayEquals(byteArrayOf(1, 0, 0, 0), wire.calls.single().data)
     }
 
-    @Test fun `EOS stop writes output zero without fetching events or setting mode`() = runTest {
+    @Test fun `EOS stop restores camera output without fetching events or setting mode`() = runTest {
         val wire = RecordingWire(0x200A, 0x2001)
         assertTrue(PtpClient(wire).canonSetLiveViewOutput(false).ok)
         assertEquals(listOf(0x1016, 0x9110), wire.calls.map { it.op })
-        assertEosWrite(wire.calls.last(), 0xB0, 0)
+        assertEosWrite(wire.calls.last(), 0xB0, 1)
     }
 
     @Test fun `wire failure during EOS setup propagates instead of declaring unsupported`() = runTest {
